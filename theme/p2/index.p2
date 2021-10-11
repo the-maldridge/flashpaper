@@ -1,0 +1,26 @@
+{% extends "base.p2" %}
+
+{% block title %}FlashPaper Main{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="center">
+    <p>Use the form below to submit a paste which will be securely
+    encrypted and will expire either on retrieval, or at the
+    expiration of the selected interval (whichever comes first).</>p
+    <br />
+    <form method="post">
+      <textarea name="paste" class="pastebox"></textarea>
+      <br />
+      <br />
+      <select name="validity">
+        <option value="15m">15 Minutes</option>
+        <option value="1h">1 Hour</option>
+        <option value="24h">1 Day</option>
+        <option value="7d">1 Week</option>
+      </select>
+      <input type="submit" value="Generate Link"></input>
+    </form>
+  </div>
+</div>
+{% endblock %}
