@@ -1,6 +1,7 @@
 body {
     width: 100%;
     height: 100%;
+    overflow: hidden;
 }
 
 #top-bar {
@@ -36,6 +37,14 @@ body {
 
 .center {
     text-align: center;
+}
+
+.linkbox {
+    font-family: sans serif;
+    padding: 0.25em;
+    border: 1px solid black;
+    border-radius: 3px;
+    background: lightgrey;
 }
 
 .pastebox {

@@ -7,9 +7,9 @@
   <div class="center">
     <p>Use the form below to submit a paste which will be securely
     encrypted and will expire either on retrieval, or at the
-    expiration of the selected interval (whichever comes first).</>p
+    expiration of the selected interval (whichever comes first).</p>
     <br />
-    <form method="post">
+    <form method="post" action="/paste/submit">
       <textarea name="paste" class="pastebox"></textarea>
       <br />
       <br />

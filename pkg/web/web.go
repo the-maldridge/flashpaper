@@ -39,6 +39,7 @@ func New(l hclog.Logger) (*Server, error) {
 	x.fileServer(x.r, "/static", http.Dir("theme/static"))
 
 	x.r.Get("/", x.index)
+	x.r.Post("/paste/submit", x.acceptPaste)
 	return &x, nil
 }
 
@@ -54,6 +55,24 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := t.ExecuteWriter(nil, w); err != nil {
+		s.templateErrorHandler(w, err)
+	}
+}
+
+func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	s.l.Debug("Submitted Form Data", "validity", r.Form.Get("validity"), "paste", r.Form.Get("paste"))
+
+	ctx := pongo2.Context{
+		"validity": r.Form.Get("validity"),
+	}
+
+	t, err := s.tmpls.FromCache("success.p2")
+	if err != nil {
+		s.templateErrorHandler(w, err)
+		return
+	}
+	if err := t.ExecuteWriter(ctx, w); err != nil {
 		s.templateErrorHandler(w, err)
 	}
 }

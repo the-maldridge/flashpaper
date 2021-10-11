@@ -1,0 +1,21 @@
+{% extends "base.p2" %}
+
+{% block title %}Flashpaper Link{% endblock %}
+
+{% block content %}
+<div class="card">
+  <p>Your paste has been successfully submitted.  Share the link below
+  to access it.  The link will expire on first use or in {{ validity }}.</p>
+
+  <br />
+  <br />
+  <div class="center">
+    <div class="linkbox">
+      foo
+    </div>
+  </div>
+  <br />
+  <br />
+  <p>You may now close this window.</p>
+</div>
+{% endblock %}
