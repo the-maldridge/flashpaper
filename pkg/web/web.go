@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 	"time"
+	"strconv"
 
 	"github.com/flosch/pongo2/v4"
 	"github.com/go-chi/chi/v5"
@@ -82,14 +83,15 @@ func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.l.Warn("Error creating uuid", "error", err)
 	}
+	id := strconv.Itoa(int(idUUID.ID()))
 
-	if err := s.s.PutEx(idUUID.String(), r.Form.Get("paste"), validInterval); err != nil {
+	if err := s.s.PutEx(id, r.Form.Get("paste"), validInterval); err != nil {
 		s.l.Warn("Error with storage", "error", err)
 	}
 
 	ctx := pongo2.Context{
 		"validity":   r.Form.Get("validity"),
-		"url":        path.Join("http://"+r.Host, "paste/get", idUUID.String()),
+		"url":        path.Join("http://"+r.Host, "paste/get", id),
 		"expiration": time.Now().Add(validInterval).Format(time.RFC850),
 	}
 
