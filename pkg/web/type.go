@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"time"
 )
 
@@ -8,7 +9,7 @@ import (
 // provided by anything assuming it provides a mechanism for
 // expiration.
 type Storage interface {
-	PutEx(string, interface{}, time.Duration) error
-	Get(string) (interface{}, error)
-	Delete(string) error
+	PutEx(context.Context, string, interface{}, time.Duration) error
+	Get(context.Context, string) (string, error)
+	Del(context.Context, string) error
 }

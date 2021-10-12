@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"path"
@@ -82,20 +83,17 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	s.l.Debug("Submitted Form Data", "validity", r.Form.Get("validity"), "paste", r.Form.Get("paste"))
-
 	validInterval, err := time.ParseDuration(r.Form.Get("validity"))
 	if err != nil {
 		validInterval = time.Minute * 15
 	}
-
 	idUUID, err := uuid.NewUUID()
 	if err != nil {
 		s.l.Warn("Error creating uuid", "error", err)
 	}
 	id := strconv.Itoa(int(idUUID.ID()))
 
-	if err := s.s.PutEx(id, r.Form.Get("paste"), validInterval); err != nil {
+	if err := s.s.PutEx(context.Background(), id, r.Form.Get("paste"), validInterval); err != nil {
 		s.l.Warn("Error with storage", "error", err)
 	}
 
@@ -118,11 +116,11 @@ func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getPaste(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "pasteID")
 
-	paste, err := s.s.Get(id)
+	paste, err := s.s.Get(context.Background(), id)
 	if err != nil {
 		s.l.Warn("Error retrieving paste", "error", err)
 	}
-	if err := s.s.Delete(id); err != nil {
+	if err := s.s.Del(context.Background(), id); err != nil {
 		s.l.Warn("Error deleting paste", "error", err)
 	}
 
