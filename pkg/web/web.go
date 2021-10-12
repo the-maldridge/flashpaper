@@ -3,11 +3,14 @@ package web
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
+	"time"
 
 	"github.com/flosch/pongo2/v4"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -15,6 +18,7 @@ import (
 type Server struct {
 	l hclog.Logger
 	r chi.Router
+	s Storage
 
 	tmpls *pongo2.TemplateSet
 }
@@ -43,8 +47,14 @@ func New(l hclog.Logger) (*Server, error) {
 	return &x, nil
 }
 
+// SetStorage allows the storage engine to be setup.
+func (s *Server) SetStorage(st Storage) {
+	s.s = st
+}
+
 // Serve blocks and serves.
 func (s *Server) Serve(bind string) error {
+	s.l.Info("Webserver is starting")
 	return http.ListenAndServe(bind, s.r)
 }
 
@@ -63,8 +73,24 @@ func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	s.l.Debug("Submitted Form Data", "validity", r.Form.Get("validity"), "paste", r.Form.Get("paste"))
 
+	validInterval, err := time.ParseDuration(r.Form.Get("validity"))
+	if err != nil {
+		validInterval = time.Minute * 15
+	}
+
+	idUUID, err := uuid.NewUUID()
+	if err != nil {
+		s.l.Warn("Error creating uuid", "error", err)
+	}
+
+	if err := s.s.PutEx(idUUID.String(), r.Form.Get("paste"), validInterval); err != nil {
+		s.l.Warn("Error with storage", "error", err)
+	}
+
 	ctx := pongo2.Context{
-		"validity": r.Form.Get("validity"),
+		"validity":   r.Form.Get("validity"),
+		"url":        path.Join("http://"+r.Host, "paste/get", idUUID.String()),
+		"expiration": time.Now().Add(validInterval).Format(time.RFC850),
 	}
 
 	t, err := s.tmpls.FromCache("success.p2")
@@ -87,7 +113,7 @@ func (s *Server) fileServer(r chi.Router, path string, root http.FileSystem) {
 	}
 
 	if path != "/" && path[len(path)-1] != '/' {
-		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
+		r.Get(path, http.RedirectHandler(path+"/", http.StatusMovedPermanently).ServeHTTP)
 		path += "/"
 	}
 	path += "*"
