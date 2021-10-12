@@ -49,7 +49,7 @@ func New(l hclog.Logger) (*Server, error) {
 
 	x.r.Get("/", x.index)
 	x.r.Post("/paste/submit", x.acceptPaste)
-	x.r.Get("/paste/{pasteID}", x.getPaste)
+	x.r.Get("/paste/{pasteID}/{key}", x.getPaste)
 	return &x, nil
 }
 
@@ -93,13 +93,15 @@ func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
 	}
 	id := strconv.Itoa(int(idUUID.ID()))
 
-	if err := s.s.PutEx(context.Background(), id, r.Form.Get("paste"), validInterval); err != nil {
+	data, key := encrypt(r.Form.Get("paste"))
+
+	if err := s.s.PutEx(context.Background(), id, data, validInterval); err != nil {
 		s.l.Warn("Error with storage", "error", err)
 	}
 
 	ctx := pongo2.Context{
 		"validity":   r.Form.Get("validity"),
-		"url":        path.Join("http://"+r.Host, "paste", id),
+		"url":        path.Join("http://"+r.Host, "paste", id, key),
 		"expiration": time.Now().Add(validInterval).Format(time.RFC850),
 	}
 
@@ -116,12 +118,20 @@ func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getPaste(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "pasteID")
 
-	paste, err := s.s.Get(context.Background(), id)
-	if err != nil {
-		s.l.Warn("Error retrieving paste", "error", err)
+	paste, ferr := s.s.Get(context.Background(), id)
+	if ferr != nil {
+		s.l.Warn("Error retrieving paste", "error", ferr)
 	}
-	if err := s.s.Del(context.Background(), id); err != nil {
+	err := s.s.Del(context.Background(), id)
+	if err != nil {
 		s.l.Warn("Error deleting paste", "error", err)
+	}
+
+	// Only try to decrypt the paste if we actually got something
+	// above.  Otherwise leave paste nil so that we get the error
+	// page below.
+	if ferr == nil {
+		paste = decrypt(paste, chi.URLParam(r, "key"))
 	}
 
 	ctx := pongo2.Context{
