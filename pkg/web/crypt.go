@@ -3,7 +3,6 @@ package web
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
 	"crypto/rand"
 	"encoding/hex"
 	"io"
@@ -12,10 +11,7 @@ import (
 func encrypt(data string) (string, string) {
 	k := make([]byte, 32)
 	rand.Read(k)
-	hasher := md5.New()
-	hasher.Write(k)
-	key := hex.EncodeToString(hasher.Sum(nil))
-	block, _ := aes.NewCipher([]byte(key))
+	block, _ := aes.NewCipher(k)
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		panic(err.Error())
@@ -25,11 +21,14 @@ func encrypt(data string) (string, string) {
 		panic(err.Error())
 	}
 	ciphertext := gcm.Seal(nonce, nonce, []byte(data), nil)
-	return string(ciphertext), key
+	return string(ciphertext), hex.EncodeToString(k)
 }
 
 func decrypt(data, k string) string {
-	key := []byte(k)
+	key, err := hex.DecodeString(k)
+	if err != nil {
+		return ""
+	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err.Error())
