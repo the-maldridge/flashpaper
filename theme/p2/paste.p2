@@ -1,0 +1,19 @@
+{% extends "base.p2" %}
+
+{% block title %}Flashpaper Paste{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if paste %}
+  <div>
+    {{paste}}
+  </div >
+  {% else %}
+  <div class="center">
+    No paste with that ID exists.  Please double check your link and
+    try again.  Pastes may only be read once, so your paste may have
+    already been accessed.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

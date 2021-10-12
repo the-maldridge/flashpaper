@@ -10,4 +10,5 @@ import (
 type Storage interface {
 	PutEx(string, interface{}, time.Duration) error
 	Get(string) (interface{}, error)
+	Delete(string) error
 }

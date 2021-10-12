@@ -48,6 +48,7 @@ func New(l hclog.Logger) (*Server, error) {
 
 	x.r.Get("/", x.index)
 	x.r.Post("/paste/submit", x.acceptPaste)
+	x.r.Get("/paste/{pasteID}", x.getPaste)
 	return &x, nil
 }
 
@@ -100,11 +101,36 @@ func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
 
 	ctx := pongo2.Context{
 		"validity":   r.Form.Get("validity"),
-		"url":        path.Join("http://"+r.Host, "paste/get", id),
+		"url":        path.Join("http://"+r.Host, "paste", id),
 		"expiration": time.Now().Add(validInterval).Format(time.RFC850),
 	}
 
 	t, err := s.tmpls.FromCache("success.p2")
+	if err != nil {
+		s.templateErrorHandler(w, err)
+		return
+	}
+	if err := t.ExecuteWriter(ctx, w); err != nil {
+		s.templateErrorHandler(w, err)
+	}
+}
+
+func (s *Server) getPaste(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "pasteID")
+
+	paste, err := s.s.Get(id)
+	if err != nil {
+		s.l.Warn("Error retrieving paste", "error", err)
+	}
+	if err := s.s.Delete(id); err != nil {
+		s.l.Warn("Error deleting paste", "error", err)
+	}
+
+	ctx := pongo2.Context{
+		"paste": paste,
+	}
+
+	t, err := s.tmpls.FromCache("paste.p2")
 	if err != nil {
 		s.templateErrorHandler(w, err)
 		return
