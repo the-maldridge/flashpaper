@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 
 	"github.com/flosch/pongo2/v4"
 	"github.com/go-chi/chi/v5"
@@ -20,6 +20,7 @@ type Server struct {
 	l hclog.Logger
 	r chi.Router
 	s Storage
+	n *http.Server
 
 	tmpls *pongo2.TemplateSet
 }
@@ -34,9 +35,11 @@ func New(l hclog.Logger) (*Server, error) {
 	x := Server{
 		l:     l.Named("web"),
 		r:     chi.NewRouter(),
+		n:     &http.Server{},
 		tmpls: pongo2.NewSet("html", sbl),
 	}
 	x.tmpls.Debug = true
+	x.n.Handler = x.r
 
 	x.r.Use(middleware.Logger)
 	x.r.Use(middleware.Heartbeat("/ping"))
@@ -56,7 +59,13 @@ func (s *Server) SetStorage(st Storage) {
 // Serve blocks and serves.
 func (s *Server) Serve(bind string) error {
 	s.l.Info("Webserver is starting")
-	return http.ListenAndServe(bind, s.r)
+	s.n.Addr = bind
+	return s.n.ListenAndServe()
+}
+
+// Shutdown terminates the HTTP server
+func (s *Server) Shutdown() {
+	s.n.Close()
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {

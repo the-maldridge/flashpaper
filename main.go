@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/buraksezer/olric"
 	"github.com/buraksezer/olric/config"
@@ -55,5 +59,25 @@ func main() {
 	}
 	ws.SetStorage(dm)
 
-	ws.Serve(":8080")
+	go ws.Serve(":8080")
+
+	sigs := make(chan os.Signal, 1)
+	done := make(chan struct{}, 1)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		appLogger.Info("Shutting down")
+
+		ctx, _ = context.WithTimeout(context.Background(), 10*time.Second)
+		err = db.Shutdown(ctx)
+		if err != nil {
+			appLogger.Warn("Error shutting down olric", "error", err)
+		}
+		ws.Shutdown()
+		close(done)
+	}()
+
+	<-done
+	appLogger.Info("Goodbye!")
 }
