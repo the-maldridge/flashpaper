@@ -8,3 +8,4 @@ FROM scratch
 COPY --from=build /flashpaper /flashpaper
 COPY theme /theme
 ENTRYPOINT ["/flashpaper"]
+EXPOSE 8080/tcp
