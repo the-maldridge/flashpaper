@@ -23,19 +23,24 @@ func main() {
 	})
 	appLogger.Info("Initializing")
 
-	ws, err := web.New(appLogger)
-	if err != nil {
-		appLogger.Error("Error initializing webserver", "error", err)
-		return
-	}
-
 	st, err := storage.NewRedis(appLogger)
 	if err != nil {
 		appLogger.Error("Error connecting to storage", "error", err)
 		return
 	}
 
-	ws.SetStorage(st)
+	opts := []web.Option{
+		web.WithLogger(appLogger),
+		web.WithStorage(st),
+		web.WithBasePath(os.Getenv("FLASHPAPER_BASEPATH")),
+		web.WithTemplateDebug(os.Getenv("FLASHPAPER_DEBUGTEMPLATES") != ""),
+	}
+
+	ws, err := web.New(opts...)
+	if err != nil {
+		appLogger.Error("Error initializing webserver", "error", err)
+		return
+	}
 	go ws.Serve(":8080")
 
 	sigs := make(chan os.Signal, 1)

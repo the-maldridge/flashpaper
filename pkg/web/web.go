@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -17,33 +16,24 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-// Server contains the various components of the flashpaper server.
-type Server struct {
-	l hclog.Logger
-	r chi.Router
-	s Storage
-	n *http.Server
-
-	basePath string
-
-	tmpls *pongo2.TemplateSet
-}
-
 // New returns an initialized server instance.
-func New(l hclog.Logger) (*Server, error) {
+func New(opts ...Option) (*Server, error) {
 	sbl, err := pongo2.NewSandboxedFilesystemLoader("theme/p2")
 	if err != nil {
 		return nil, err
 	}
 
 	x := Server{
-		l:        l.Named("web"),
-		r:        chi.NewRouter(),
-		n:        &http.Server{},
-		basePath: os.Getenv("FLASHPAPER_BASEPATH"),
-		tmpls:    pongo2.NewSet("html", sbl),
+		l:     hclog.NewNullLogger(),
+		r:     chi.NewRouter(),
+		n:     &http.Server{},
+		tmpls: pongo2.NewSet("html", sbl),
 	}
-	x.tmpls.Debug = true
+
+	for _, opt := range opts {
+		opt(&x)
+	}
+
 	x.n.Handler = x.r
 
 	x.r.Use(middleware.Logger)
@@ -56,11 +46,6 @@ func New(l hclog.Logger) (*Server, error) {
 	x.r.Post(path.Join("/", x.basePath, "/paste/submit"), x.acceptPaste)
 	x.r.Get(path.Join("/", x.basePath, "/paste/{pasteID}/{key}"), x.getPaste)
 	return &x, nil
-}
-
-// SetStorage allows the storage engine to be setup.
-func (s *Server) SetStorage(st Storage) {
-	s.s = st
 }
 
 // Serve blocks and serves.
