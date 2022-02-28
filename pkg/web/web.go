@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -23,6 +24,8 @@ type Server struct {
 	s Storage
 	n *http.Server
 
+	basePath string
+
 	tmpls *pongo2.TemplateSet
 }
 
@@ -34,10 +37,11 @@ func New(l hclog.Logger) (*Server, error) {
 	}
 
 	x := Server{
-		l:     l.Named("web"),
-		r:     chi.NewRouter(),
-		n:     &http.Server{},
-		tmpls: pongo2.NewSet("html", sbl),
+		l:        l.Named("web"),
+		r:        chi.NewRouter(),
+		n:        &http.Server{},
+		basePath: os.Getenv("FLASHPAPER_BASEPATH"),
+		tmpls:    pongo2.NewSet("html", sbl),
 	}
 	x.tmpls.Debug = true
 	x.n.Handler = x.r
@@ -46,11 +50,11 @@ func New(l hclog.Logger) (*Server, error) {
 	x.r.Use(middleware.Heartbeat("/ping"))
 	x.r.Use(x.checkStorage)
 
-	x.fileServer(x.r, "/static", http.Dir("theme/static"))
+	x.fileServer(x.r, path.Join(x.basePath, "/static"), http.Dir("theme/static"))
 
-	x.r.Get("/", x.index)
-	x.r.Post("/paste/submit", x.acceptPaste)
-	x.r.Get("/paste/{pasteID}/{key}", x.getPaste)
+	x.r.Get(path.Join("/", x.basePath), x.index)
+	x.r.Post(path.Join("/", x.basePath, "/paste/submit"), x.acceptPaste)
+	x.r.Get(path.Join("/", x.basePath, "/paste/{pasteID}/{key}"), x.getPaste)
 	return &x, nil
 }
 
@@ -89,7 +93,7 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 		s.templateErrorHandler(w, err)
 		return
 	}
-	if err := t.ExecuteWriter(nil, w); err != nil {
+	if err := t.ExecuteWriter(pongo2.Context{"base_path": s.basePath}, w); err != nil {
 		s.templateErrorHandler(w, err)
 	}
 }
@@ -113,8 +117,9 @@ func (s *Server) acceptPaste(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := pongo2.Context{
+		"base_path":  s.basePath,
 		"validity":   r.Form.Get("validity"),
-		"url":        path.Join("http://"+r.Host, "paste", id, key),
+		"url":        path.Join("http://"+r.Host, s.basePath, "paste", id, key),
 		"expiration": time.Now().Add(validInterval).Format(time.RFC850),
 	}
 
@@ -148,7 +153,8 @@ func (s *Server) getPaste(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := pongo2.Context{
-		"paste": paste,
+		"base_path": s.basePath,
+		"paste":     paste,
 	}
 
 	t, err := s.tmpls.FromCache("paste.p2")

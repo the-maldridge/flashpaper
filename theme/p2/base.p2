@@ -1,8 +1,8 @@
 <html>
   <head>
     <title>{% block title %}Flashpaper Ephemeral Paste{% endblock %}</title>
-    <link href="/static/css/reset.css" rel="stylesheet">
-    <link href="/static/css/theme.css" rel="stylesheet">
+    <link href="{{base_path}}/static/css/reset.css" rel="stylesheet">
+    <link href="{{base_path}}/static/css/theme.css" rel="stylesheet">
   </head>
   <body>
     <div id="top-bar" class="bar">

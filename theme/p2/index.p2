@@ -9,7 +9,7 @@
     encrypted and will expire either on retrieval, or at the
     expiration of the selected interval (whichever comes first).</p>
     <br />
-    <form method="post" action="/paste/submit">
+    <form method="post" action="{{base_path}}/paste/submit">
       <textarea name="paste" class="pastebox"></textarea>
       <br />
       <br />
