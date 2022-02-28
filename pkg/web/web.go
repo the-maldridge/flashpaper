@@ -44,6 +44,7 @@ func New(l hclog.Logger) (*Server, error) {
 
 	x.r.Use(middleware.Logger)
 	x.r.Use(middleware.Heartbeat("/ping"))
+	x.r.Use(x.checkStorage)
 
 	x.fileServer(x.r, "/static", http.Dir("theme/static"))
 
@@ -68,6 +69,18 @@ func (s *Server) Serve(bind string) error {
 // Shutdown terminates the HTTP server
 func (s *Server) Shutdown() {
 	s.n.Close()
+}
+
+func (s *Server) checkStorage(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := s.s.Ping(r.Context()); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Fatal Error: Storage service is unavailable: %v", err)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {

@@ -12,9 +12,14 @@ import (
 )
 
 func main() {
+	loglevel := os.Getenv("LOG_LEVEL")
+	if loglevel == "" {
+		loglevel = "INFO"
+	}
+
 	appLogger := hclog.New(&hclog.LoggerOptions{
 		Name:  "flashpaper",
-		Level: hclog.LevelFromString("DEBUG"),
+		Level: hclog.LevelFromString(loglevel),
 	})
 	appLogger.Info("Initializing")
 

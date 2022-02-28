@@ -24,6 +24,10 @@ func NewRedis(l hclog.Logger) (web.Storage, error) {
 	return &r, nil
 }
 
+func (r *Redis) Ping(ctx context.Context) error {
+	return r.Client.Ping(ctx).Err()
+}
+
 func (r *Redis) PutEx(ctx context.Context, key string, value interface{}, d time.Duration) error {
 	return r.SetEX(ctx, key, value, d).Err()
 }
